@@ -12,17 +12,17 @@
 #############################################
 ##### 1. Python modules #####
 from ruffus import *
-import sys, os, json, operator#, geode, RNAseq, operator, sklearn.metrics.pairwise
+import sys, os, json, operator #sklearn.metrics.pairwise
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import functools
 
 ##### 2. Custom modules #####
-# Pipeline running
+# Pipeline running (supporting codes)
 sys.path.append('pipeline/scripts')
 from Melanoma import *
-
+# import geode, RNAseq
 #############################################
 ########## 2. General Setup
 #############################################
@@ -64,7 +64,7 @@ def getCounts(infiles, outfile):
 	expression_dataframe = load_read_counts(archs_matrix, gsms = gsmlist)
 	# Save to outfile
 	expression_dataframe.to_csv(outfile, sep='\t')
-
+#
 #############################################
 ########## 2. Normalize the gene expression table
 #############################################
