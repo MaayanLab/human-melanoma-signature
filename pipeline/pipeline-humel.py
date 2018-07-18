@@ -22,6 +22,7 @@ import functools
 # Pipeline running (import supporting codes)
 sys.path.append('pipeline/scripts')
 from Melanoma import *
+import geode_jupies
 # import geode, RNAseq, sklearn.metrics.pairwise
 
 #############################################
@@ -52,7 +53,7 @@ melanoma_masterfile = 'rawdata/mela_rna_3rep_short.csv'
 	   's1-expression_data.dir/melanoma-counts.txt')
 
 def getCounts(infiles, outfile):
-	# Define infiles
+	# Split & define infiles
 	archs_matrix, metadata_file = infiles
 	# Read infile metadata_file into pandas
 	metadata_df = pd.read_csv(metadata_file)
@@ -103,13 +104,13 @@ def getCPM(infile, outfile):
 	   's2-signatures.dir/melanoma-idmatches.txt')
 
 def getMatches(infiles, outfile):
-	# Define infiles
+	# Split & define infiles
 	melanoma_masterfile, cpm = infiles
 	# Read the previously generated infiles
 	melanoma_masterdf = pd.read_csv(melanoma_masterfile,index_col='study_index')
 	cpm_table = pd.read_table(cpm, index_col='gene')
 
-	# create a dictionary called matches
+	# Create a dictionary called matches
 	matches = {} 
 	for std_i, row in melanoma_masterdf.iterrows(): # std_i is the key of the dictionary, index of the dataframe
 		ctrl_gsms = row['ctrl_id'].split(' ')
@@ -118,28 +119,51 @@ def getMatches(infiles, outfile):
 		match[np.in1d(cpm_table.columns, ctrl_gsms)] = 1
 		match[np.in1d(cpm_table.columns, pert_gsms)] = 2
 		matches[std_i] = match
-
+	# Convert a dict to a df, assign GSM IDs as index named "sample"
 	matches_df=pd.DataFrame(matches,index=cpm_table.columns)
 	matches_df.index.name='sample'
 	matches_df.to_csv(outfile, sep="\t")
+
 #############################################
 ########## 2. Create signatures
 #############################################
-##### Describe the step
-### Input: 
-### Output: 
+##### Use the "matches" map to generate signatures based on study_index, ctrl/pert status, and genes 
 @transform(getMatches,
 		   suffix('-idmatches.txt'),
 		   add_inputs(getCPM),
 		   '-signatures.txt')
 def getSignatures(infiles,outfile):
-	print (infiles, outfile)
+	# Split & define infiles
+	matches, cpm = infiles
+	# Read infiles into pandas
+	matches_df=pd.read_table(matches, index_col='sample')
+	cpm_table=pd.read_table(cpm, index_col='gene')
+	# Initialize results
+	results = []
+	# Looooop
+	for std_i, match in matches_df.items():
+		print('Doing {}...'.format(std_i))
+		cd_res = geode_jupies.chdir(cpm_table.values, match.values, cpm_table.index, 
+						gamma=.5, sort=False, calculate_sig=False)
+		cd_dataframe = pd.DataFrame(cd_res).rename(columns={1: 'gene', 0: 'CD'})
+		cd_dataframe['signature'] = std_i
+		results.append(cd_dataframe)
+
+	# Concatenate and merge
+	result_dataframe = pd.concat(results)
+	result_table = result_dataframe.pivot(index='gene', columns='signature', values='CD')
+
+	# Write
+	result_table.to_csv(outfile, sep='\t')
+
+
 	# # create an empty dataframe
 	# cd_results = pd.DataFrame(index=cpm_table.index)
+	
 	# d_std_i_cd = {} # to top up/down genes
 
 	# for std_i, match in matches.items():
-	# 	cd_res = geode.chdir(cpm_table.values, match, cpm_table.index, 
+	# 	cd_res = geode_jupies.chdir(cpm_table.values, match, cpm_table.index, 
 	# 					gamma=.5, sort=False, calculate_sig=False)
 	# 	cd_coefs = np.array(map(lambda x: x[0], cd_res))
 	# 	cd_results[std_i] = cd_coefs

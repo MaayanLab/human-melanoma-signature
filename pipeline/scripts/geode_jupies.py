@@ -29,11 +29,11 @@ def chdir(data, sampleclass, genes, gamma=1., sort=True, calculate_sig=False, nn
 	
 	## check input
 	data.astype(float)
-	sampleclass = np.array(map(int, sampleclass))
+	# sampleclass = np.array(map(int, sampleclass))
 	# masks
-	m_non0 = sampleclass != 0
-	m1 = sampleclass[m_non0] == 1
-	m2 = sampleclass[m_non0] == 2
+	m_non0 = [x != 0 for x in sampleclass]
+	m1 = [x == 1 for x in sampleclass if x]
+	m2 = [x == 2 for x in sampleclass if x]
 
 	if type(gamma) not in [float, int]:
 		raise ValueError("gamma has to be a numeric number")
@@ -49,8 +49,8 @@ def chdir(data, sampleclass, genes, gamma=1., sort=True, calculate_sig=False, nn
 	data = zscore(data) # standardize for each genes across samples
 
 	## start to compute
-	n1 = m1.sum() # number of controls
-	n2 = m2.sum() # number of experiments
+	n1 = sum(m1) # number of controls
+	n2 = sum(m2) # number of experiments
 
 	## the difference between experiment mean vector and control mean vector.
 	meanvec = data[:,m2].mean(axis=1) - data[:,m1].mean(axis=1) 
@@ -108,7 +108,7 @@ def chdir(data, sampleclass, genes, gamma=1., sort=True, calculate_sig=False, nn
 		# ratio_to_null
 		ratios = np.cumsum(relerr)/np.sum(relerr)- np.linspace(1./len(meanvec),1,len(meanvec))
 		res = [(item[1],item[2], ratio) for item, ratio in zip(grouped, ratios)] 
-		print ('Number of significant genes: %f'% (np.argmax(ratios)+1))
+		print('Number of significant genes: %s'%(np.argmax(ratios)+1))
 		if sig_only:
 			return res[0:np.argmax(ratios)+1]
 		else:
@@ -197,4 +197,3 @@ def paea_wrapper(chdir, gmt_fn, case_sensitive=False, sort=True):
 	else: ## if not sort, return unsorted p_vals only
 		res = [p_val for term, p_val in res ]
 	return res
-
