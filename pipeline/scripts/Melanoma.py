@@ -14,6 +14,7 @@
 import h5py
 import numpy as np
 import pandas as pd
+import math
 
 ##### 2. Custom modules #####
 # Pipeline running
@@ -60,9 +61,6 @@ def load_read_counts(h5_file, gsms=[]):
 
 		# Fix column names
 		expr_df.columns = [x.decode('utf-8') for x in expr_df.columns]
-		# Filter out samples with very low read counts
-		# valid_sample_mask = expr_df.sum(axis=0) > 100
-		# expr_df = expr_df.loc[:, valid_sample_mask]
 
 		return expr_df
 		
