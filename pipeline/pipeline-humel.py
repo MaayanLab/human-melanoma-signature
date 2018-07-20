@@ -16,7 +16,6 @@ import sys, os, json, operator
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import functools
 
 ##### 2. Custom modules #####
 # Pipeline running (import supporting codes)
@@ -75,6 +74,7 @@ def getCounts(infiles, outfile):
 @transform(getCounts,
 		   suffix('-counts.txt'),
 		   '-cpm.txt')
+
 def getCPM(infile, outfile):
 	# Read the previously generated raw gene expression
 	# index_col = False -> forces pandas to not use the 1st column as the index
@@ -99,7 +99,6 @@ def getCPM(infile, outfile):
 ##### Use the dictionary to create signatures of studies
 
 @mkdir('s2-signatures.dir')
-
 @merge([melanoma_masterfile, getCPM],
 	   's2-signatures.dir/melanoma-idmatches.txt')
 
@@ -109,7 +108,6 @@ def getMatches(infiles, outfile):
 	# Read the previously generated infiles
 	melanoma_masterdf = pd.read_csv(melanoma_masterfile,index_col='study_index')
 	cpm_table = pd.read_table(cpm, index_col='gene')
-
 	# Create a dictionary called matches
 	matches = {} 
 	for std_i, row in melanoma_masterdf.iterrows(): # std_i is the key of the dictionary, index of the dataframe
@@ -132,6 +130,7 @@ def getMatches(infiles, outfile):
 		   suffix('-idmatches.txt'),
 		   add_inputs(getCPM),
 		   '-signatures.txt')
+
 def getSignatures(infiles,outfile):
 	# Split & define infiles
 	matches, cpm = infiles
@@ -144,43 +143,59 @@ def getSignatures(infiles,outfile):
 	for std_i, match in matches_df.items():
 		print('Doing {}...'.format(std_i))
 		cd_res = geode_jupies.chdir(cpm_table.values, match.values, cpm_table.index, 
-						gamma=.5, sort=False, calculate_sig=False)
+						gamma=.5, sort=False, calculate_sig=False)		
 		cd_dataframe = pd.DataFrame(cd_res).rename(columns={1: 'gene', 0: 'CD'})
 		cd_dataframe['signature'] = std_i
 		results.append(cd_dataframe)
-
 	# Concatenate and merge
 	result_dataframe = pd.concat(results)
 	result_table = result_dataframe.pivot(index='gene', columns='signature', values='CD')
-
 	# Write
 	result_table.to_csv(outfile, sep='\t')
 
+#############################################
+########## 3. Subset up & down regulated genes
+#############################################
+##### Create signatures of up/down genes separately
+@transform(getSignatures,
+		   suffix('-signatures.txt'),
+		   '-geneset-top.json')
 
-	# # create an empty dataframe
-	# cd_results = pd.DataFrame(index=cpm_table.index)
-	
-	# d_std_i_cd = {} # to top up/down genes
+def getGenesets(infile, outfile):
+	 # Create empty dictionary
+	dict_top_genes ={}
+	sig_df = pd.read_table(infile).set_index('gene')
+	# Number of studies to be processed
+	n = len(sig_df.columns)
+	i = 0
+	# Loop through studies 
+	for study in sig_df.columns[:]:
+		i += 1 # Print computing status
+		print('Doing study {study} ({i}/{n})...'.format(**locals()))
+		# Extract column
+		col = sig_df[study].sort_values(ascending=False) # Sort values in decreasing order
+		genesets = {
+			"top":col.index[:300].tolist(),
+			"bottom":col.index[-300:].tolist()
+			}
+		# Extract the top/bottom 300 genes from the index
+		dict_top_genes[study] = genesets	
+	# open file
+	f = open(outfile, 'w')
+	# write to file
+	f.write(json.dumps(dict_top_genes, ensure_ascii=False, indent=4))
+	# close file
+	f.close()
 
-	# for std_i, match in matches.items():
-	# 	cd_res = geode_jupies.chdir(cpm_table.values, match, cpm_table.index, 
-	# 					gamma=.5, sort=False, calculate_sig=False)
-	# 	cd_coefs = np.array(map(lambda x: x[0], cd_res))
-	# 	cd_results[std_i] = cd_coefs
-		
-	# 	# sort CD in by absolute values in descending order
-	# 	srt_idx = np.abs(cd_coefs).argsort()[::-1]
-	# 	cd_coefs = cd_coefs[srt_idx][:600]
-	# 	sorted_DEGs = cpm_table.index[srt_idx][:600]
-		
-	# 	# split up and down
-	# 	up_genes = dict(zip(sorted_DEGs[cd_coefs > 0], cd_coefs[cd_coefs > 0]))
-	# 	dn_genes = dict(zip(sorted_DEGs[cd_coefs < 0], cd_coefs[cd_coefs < 0]))
-	# 	d_std_i_cd[std_i+'-up'] = up_genes
-	# 	d_std_i_cd[std_i+'-dn'] = dn_genes
 
-	# 	# Save cd_results as your signature table
-	# 	cd_results.to_csv(outfile, sep='\t')
+
+
+
+
+
+
+
+
 ##################################################
 ##################################################
 ########## Run pipeline
