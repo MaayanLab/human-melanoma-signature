@@ -16,6 +16,9 @@ import sys, os, json, operator
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import sklearn.metrics.pairwise as smp
+from scipy.spatial.distance import cosine
+import seaborn as sns; sns.set(color_codes=True)
 
 ##### 2. Custom modules #####
 # Pipeline running (import supporting codes)
@@ -187,13 +190,38 @@ def getGenesets(infile, outfile):
 	# close file
 	f.close()
 
+#######################################################
+#######################################################
+########## S3. Explore relationships between different studies
+#######################################################
+#######################################################
+# Visualize 'similarities' of different studies via cosine distance heatmap
 
+#############################################
+########## 1. Calculate cosine distances of every study pair
+#############################################
+@mkdir('s3-distances.dir')
+@files(getSignatures,'s3-distances.dir/melanoma-distance.txt')
 
+def getCosdis(infile, outfile):
+	# Import infile table, transpose df so index is n_samples, which is required for pair-wise distance func
+	signature_df = pd.read_table(infile, index_col='gene').T
+	# Create an empty dataframe with study_index as both index and column labels
+	cos_distance_df = pd.DataFrame(index=signature_df.index, columns=signature_df.index)
+	# Compute the distance matrix from a vector array X
+	cos_distance = smp.pairwise_distances(signature_df, metric = 'cosine')
+	# Note that cosine distance is defined as 1.0 minus the cosine similarity, hence a completely different function
+	# Fill in the empty df earlier with values from cos_distance array
+	cos_distance_df[:]=cos_distance
+	# Export table out
+	cos_distance_df.to_csv(outfile, sep='\t')
 
-
-
-
-
+#############################################
+########## 2. Normalize the gene expression table
+#############################################
+##### Describe the step
+### Input: 
+### Output: 
 
 
 ##################################################
@@ -203,7 +231,7 @@ def getGenesets(infile, outfile):
 ##################################################
 
 #############################################
-########## 2. Normalize the gene expression table
+########## 2. Step Name
 #############################################
 ##### Describe the step
 ### Input: 
