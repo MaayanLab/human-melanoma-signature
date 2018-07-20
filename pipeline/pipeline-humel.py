@@ -217,11 +217,20 @@ def getCosdis(infile, outfile):
 	cos_distance_df.to_csv(outfile, sep='\t')
 
 #############################################
-########## 2. Normalize the gene expression table
+########## 2. Visualization of the distances
 #############################################
-##### Describe the step
-### Input: 
-### Output: 
+##### Create heatmap of cos distances between studies
+@transform(getCosdis,
+		   suffix('-distance.txt'),
+		   '-3repstudies-distance-heatmap.png')
+
+def getDismap (infile,outfile):
+	# Import distance file, set 1st column as index
+	cos_distance_df = pd.read_table(infile, index_col=0)
+	# Visualize with the seaborn package
+	g1 = sns.clustermap(cos_distance_df)
+	# Export graph
+	g1.savefig(outfile)
 
 
 ##################################################
