@@ -12,19 +12,23 @@
 #############################################
 ##### 1. Python modules #####
 from ruffus import *
-import sys, os, json, operator 
+import sys, os, json, operator, requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import sklearn.metrics.pairwise as smp
 from scipy.spatial.distance import cosine
 import seaborn as sns; sns.set(color_codes=True)
+from collections import Counter
+from collections import defaultdict
 
 ##### 2. Custom modules #####
 # Pipeline running (import supporting codes)
 sys.path.append('pipeline/scripts')
 from Melanoma import *
 import geode_jupies
+from RNAseq import *
+
 # import geode, RNAseq, sklearn.metrics.pairwise
 
 #############################################
@@ -232,13 +236,72 @@ def getDismap (infile,outfile):
 	# Export graph
 	g1.savefig(outfile)
 
+#######################################################
+#######################################################
+########## S4. Enrichment Analysis 
+#######################################################
+#######################################################
+# Explore pathways activation via Enrichr
+# Use Enrichr to compare up&down gene sets between studies
+#############################################
+########## 1. Gene set enrichment analysis
+#############################################
+##### Create enrichr results from up & down gene lists
+@mkdir('s4-enrichment.dir')
+@files(getGenesets,'s4-enrichment.dir/melanoma-enrichr-results.txt')
 
-##################################################
-##################################################
-########## Run pipeline
-##################################################
-##################################################
+def getEnrichr (infile, outfile):
+	# Read infile
+	with open(infile) as openfile:
+		dict_top_genes = json.load(openfile)
+	# Defaultdict defaults a value if that key has not been set yet
+	enr_res = []
+	# Iterate through dictionary, create gene lists and save as 'genes'
+	for signature in dict_top_genes:
+		print('Doing '+signature)
+		for direction in ('top', 'bottom'):
+			genes = dict_top_genes[signature][direction] # value = dict [1st key] [2nd key]
+			result_dataframe = run_enrichr(genes)
+			result_dataframe['direction'] = direction
+			result_dataframe['signature'] = signature
+			enr_res.append(result_dataframe)
 
+	# Concatenate
+	results = pd.concat(enr_res)
+	results.to_csv(outfile, sep='\t', index=False)
+	# freeze default dict for read only
+	# enr_res.default_factory = None
+	# open file
+	# f = open(outfile, 'w')
+	# write to file
+	# f.write(json.dumps(enr_res, ensure_ascii=False, indent=4))
+	# close file
+	# f.close()
+
+#############################################
+########## 2. Count
+#############################################
+# c = Counter()
+# for i in [enr_res[signature]['top'] for signature in enr_res.keys()]:
+#     c.update(i['term_name'].iloc[:5])
+#############################################
+########## 3. Use Clustergrammer to create heatmap of up & down genes
+#############################################
+
+
+# # POST the expression matrix to Clustergrammer and get the URL
+# def getClustergrammer (infile, outfile):
+# 	clustergrammer_url = 'http://amp.pharm.mssm.edu/clustergrammer/matrix_upload/'
+# 	r = requests.post(clustergrammer_url, files={'file': open(dict_top_genes, 'rb')})
+# 	link = r.text
+# 	display_link(link)
+
+#############################################
+########## 2. Step Name
+#############################################
+##### Describe the step
+### Input: 
+### Output: 
 #############################################
 ########## 2. Step Name
 #############################################

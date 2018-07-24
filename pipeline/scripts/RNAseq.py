@@ -101,7 +101,7 @@ def cds2_updn_link(upGenes, dnGenes, description='', aggravate=True):
 	headers = {'content-type':'application/json'}
 	r = requests.post(url,data=json.dumps(payload),headers=headers)
 	resGeneSet = r.json()
-	print resGeneSet
+	print (resGeneSet)
 	shareId = resGeneSet['shareId']
 	result_url = 'http://amp.pharm.mssm.edu/L1000CDS2/#/result/' + shareId
 	return result_url

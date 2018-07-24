@@ -15,6 +15,7 @@ import h5py
 import numpy as np
 import pandas as pd
 import math
+import time, requests, json
 
 
 ##### 2. Custom modules #####
@@ -79,3 +80,49 @@ def compute_CPMs(expr_df, CPM_cutoff=0.3, at_least_in_persent_samples=10):
 	mask_low_vals = (expr_df > CPM_cutoff).sum(axis=1) > at_least_in_n_samples
 	expr_df = expr_df.loc[mask_low_vals, :]
 	return expr_df
+
+#############################################
+########## 3. Convert Enrichr results to df (Zichen)
+############################################# 
+def submit_enrichr_geneset(geneset):
+	ENRICHR_URL = 'http://amp.pharm.mssm.edu/Enrichr/addList'
+	genes_str = '\n'.join(geneset)
+	payload = {
+	'list': (None, genes_str),
+	}
+	response = requests.post(ENRICHR_URL, files=payload)
+	if not response.ok:
+		raise Exception('Error analyzing gene list')
+	data = json.loads(response.text)
+	return data
+
+def get_enrichr_results(user_list_id, gene_set_libraries=['GO_Biological_Process_2018'], overlappingGenes=True, geneset=None):
+	ENRICHR_URL = 'http://amp.pharm.mssm.edu/Enrichr/enrich'
+	query_string = '?userListId=%s&backgroundType=%s'
+	results = []
+	for gene_set_library in gene_set_libraries:
+		response = requests.get(
+                    ENRICHR_URL +
+                   	query_string % (user_list_id, gene_set_library)
+                )
+		if not response.ok:
+			raise Exception('Error fetching enrichment results')
+
+		data = json.loads(response.text)
+		resultDataframe = pd.DataFrame(data[gene_set_library], columns=[
+		                               'rank', 'term_name', 'pvalue', 'zscore', 'combined_score', 'overlapping_genes', 'FDR', 'old_pvalue', 'old_FDR'])
+		selectedColumns = ['term_name', 'zscore', 'combined_score', 'pvalue', 'FDR'] if not overlappingGenes else [
+			'term_name', 'zscore', 'combined_score', 'FDR', 'pvalue', 'overlapping_genes']
+		resultDataframe = resultDataframe.loc[:, selectedColumns]
+		resultDataframe['gene_set_library'] = gene_set_library
+		results.append(resultDataframe)
+	concatenatedDataframe = pd.concat(results)
+	if geneset:
+		concatenatedDataframe['geneset'] = geneset
+	return concatenatedDataframe
+
+def run_enrichr(genes, genesets=['GO_Biological_Process_2018']):
+	ids = submit_enrichr_geneset(genes)
+	time.sleep(0.5)
+	results = get_enrichr_results(ids['userListId'], genesets)
+	return results
