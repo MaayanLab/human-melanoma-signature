@@ -280,7 +280,7 @@ def getEnrichr (infile, outfile):
 #############################################
 ########## 2. Analyze enrichr results cross-studies
 #############################################
-##### Find out the overlapping pathways that are modified
+##### Find out the significantly overlapping upregulated pathways via FDR values
 @transform(getEnrichr,
 		   suffix('-enrichr-results.txt'),
 		   '-all-top-FDR-log.txt')
@@ -295,8 +295,29 @@ def getTopfdr (infile, outfile):
 	# Log 10 transformation
 	all_top_log = -np.log10(toptable)
 	all_top_log.to_csv (outfile, sep='\t')
+
+	# # Convert 2D array to a boolean array
+	# mask = (all_top_log > 0.000001).sum(axis=1)
+	# # Every 'true' is score 1, and use row sum to filter
+	# fdrs_filtered = all_top_log[mask<10]
 #############################################
-########## 3. Use Clustergrammer to create heatmap of up & down genes
+########## 3. Visualize FDR of up-regulated pathways
+#############################################
+##### Use seaborn to visualize consensus pathways 
+@transform(getTopfdr,
+		   suffix('-all-top-FDR-log.txt'),
+		   '-top-FDR-log-heatmap.png')
+def getTopfdrheat (infile, outfile):
+	all_top_log = pd.read_table(infile)
+	top_terms = all_top_log.var(axis=1).sort_values(ascending=False).index[:20]
+	n = 20
+	plot_df=all_top_log.copy()
+	# Visualize with the seaborn package
+	g2 = sns.clustermap(plot_df.loc[top_terms])
+	# Export graph
+	g2.savefig(outfile)
+#############################################
+########## 4. Use Clustergrammer to create heatmap of up & down genes
 #############################################
 # from IPython.display import HTML, display
 # # to display hyperlink as <a> tag in output cells
