@@ -84,6 +84,24 @@ def compute_CPMs(expr_df, CPM_cutoff=0.3, at_least_in_persent_samples=10):
 #############################################
 ########## 3. Convert Enrichr results to df (Zichen)
 ############################################# 
+def enrichr_result_to_df(genes, meta, gmt):
+    res = enrichr_result(genes, meta=meta, gmt=gmt)
+    columns = [
+    'Rank', 
+    'Term name', 
+    'P-value', 
+    'Z-score', 
+    'Combined score', 
+    'Overlapping genes', 
+    'Adjusted p-value', 
+    'Old p-value', 
+    'Old adjusted p-value'
+    ]    
+    df = pd.DataFrame.from_records(res[gmt], columns=columns)
+    return df
+#############################################
+########## 3. Convert Enrichr results to df (Denis)
+############################################# 
 def submit_enrichr_geneset(geneset):
 	ENRICHR_URL = 'http://amp.pharm.mssm.edu/Enrichr/addList'
 	genes_str = '\n'.join(geneset)

@@ -20,7 +20,6 @@ import sklearn.metrics.pairwise as smp
 from scipy.spatial.distance import cosine
 import seaborn as sns; sns.set(color_codes=True)
 from collections import Counter
-from collections import defaultdict
 
 ##### 2. Custom modules #####
 # Pipeline running (import supporting codes)
@@ -254,40 +253,61 @@ def getEnrichr (infile, outfile):
 	# Read infile
 	with open(infile) as openfile:
 		dict_top_genes = json.load(openfile)
-	# Defaultdict defaults a value if that key has not been set yet
 	enr_res = []
 	# Iterate through dictionary, create gene lists and save as 'genes'
 	for signature in dict_top_genes:
 		print('Doing '+signature)
 		for direction in ('top', 'bottom'):
-			genes = dict_top_genes[signature][direction] # value = dict [1st key] [2nd key]
+			genes = dict_top_genes[signature][direction] # Value = dict [1st key] [2nd key]
 			result_dataframe = run_enrichr(genes)
-			result_dataframe['direction'] = direction
+			# Create new columns with dictionary value from direction
+			result_dataframe['direction'] = direction 
 			result_dataframe['signature'] = signature
 			enr_res.append(result_dataframe)
-
-	# Concatenate
+	# Concatenate & save
 	results = pd.concat(enr_res)
 	results.to_csv(outfile, sep='\t', index=False)
-	# freeze default dict for read only
+	# In case you want to write a dictionary instead
+	# enr_res = defaultdict(dict)
+	# # Iterate through dictionary, create gene lists and save as 'genes'
+	# for signature in dict_top_genes:
+	# 	print('Doing '+signature)
+	# 	for direction in ('top', 'bottom'):
+	# 		genes = dict_top_genes[signature][direction] # value = dict [1st key] [2nd key]
+	# 		enr_res[signature][direction] = run_enrichr(genes)
+	# # freeze default dict for read only
 	# enr_res.default_factory = None
-	# open file
-	# f = open(outfile, 'w')
-	# write to file
-	# f.write(json.dumps(enr_res, ensure_ascii=False, indent=4))
-	# close file
-	# f.close()
+#############################################
+########## 2. Analyze enrichr results cross-studies
+#############################################
+##### Find out the overlapping pathways that are modified
+@transform(getEnrichr,
+		   suffix('-enrichr-results.txt'),
+		   '-all-top-FDR-log.txt')
 
-#############################################
-########## 2. Count
-#############################################
-# c = Counter()
-# for i in [enr_res[signature]['top'] for signature in enr_res.keys()]:
-#     c.update(i['term_name'].iloc[:5])
+def getTopfdr (infile, outfile):
+	enr_res_df = pd.read_table(infile)
+	# Select rows whose column value equals a scalar 'top'
+	all_top = enr_res_df.loc[enr_res_df['direction'] == 'top']
+	# Create a table of pathways to study names, filtered by FDR value
+	# Fill na value is set to 1 since that'd be the lowest for log transformation later
+	toptable= all_top.pivot(index='term_name', columns = 'signature',values='FDR').fillna(1)
+	# Log 10 transformation
+	all_top_log = -np.log10(toptable)
+	all_top_log.to_csv (outfile, sep='\t')
 #############################################
 ########## 3. Use Clustergrammer to create heatmap of up & down genes
 #############################################
+# from IPython.display import HTML, display
+# # to display hyperlink as <a> tag in output cells
+# def display_link(url):
+#     raw_html = '<a href="%s" target="_blank">%s</a>' % (url, url)
+#     return display(HTML(raw_html))
 
+# clustergrammer_url = 'http://amp.pharm.mssm.edu/clustergrammer/matrix_upload/'
+# r = requests.post(clustergrammer_url, files={'file': open(infile2, 'rb')})
+# link = r.text
+# display_link(link)
 
 # # POST the expression matrix to Clustergrammer and get the URL
 # def getClustergrammer (infile, outfile):
