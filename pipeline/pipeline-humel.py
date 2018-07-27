@@ -308,7 +308,8 @@ def getTopfdr (infile, outfile):
 		   suffix('-all-top-FDR-log.txt'),
 		   '-top-FDR-log-heatmap.png')
 def getTopfdrheat (infile, outfile):
-	all_top_log = pd.read_table(infile)
+	all_top_log = pd.read_table(infile, index_col='term_name')
+	# Unbiased variance over columns, take top 20 results
 	top_terms = all_top_log.var(axis=1).sort_values(ascending=False).index[:20]
 	n = 20
 	plot_df=all_top_log.copy()
