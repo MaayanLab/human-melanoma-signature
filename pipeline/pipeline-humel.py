@@ -192,10 +192,11 @@ def getGenesets(infile, outfile):
 	f.write(json.dumps(dict_top_genes, ensure_ascii=False, indent=4))
 	# close file
 	f.close()
+
 #############################################
-########## 4. Intersection of genes
+########## 4. Extract each study's signature individually
 #############################################
-##### Find intersections of genes between all 6 clusters
+##### Prepare each study's differentially expressed gene vector
 @subdivide(getSignatures,
 		   formatter(),
 		   's2-signatures.dir/melanoma-signature-study-*.txt',
@@ -209,21 +210,63 @@ def getSinglesig(infile, outfiles, outfileRoot):
 		study_signature = sig_df[study].values
 		outfile = '{outfileRoot}{study}.txt'.format(**locals())
 		np.savetxt(outfile, study_signature)
-# @transform(getSignatures,
-# 		   suffix('-signatures.txt'),
-# 		   '-intersection.txt')
-# def getIntersection(infile, outfile):
-# 	sig_df = pd.read_table(infile).set_index('gene')
-# 	# Make each signature to a np.array
-# 	s1=sig_df['1'].values
-# 	s19c=sig_df['19_c'].values
-# 	# Take vector sum per cluster as a representation of intersection
-# 	cluster5_inter= s1 + s19c
-# 	# Sort the array in reserve order
-# 	sort_idx = np.argsort(cluster5_inter)[::-1]
-# 	# Return an index of top 500 summed genes for this cluster
-# 	sorted_genes = sig_df.index[sort_idx]
 
+#############################################
+########## 5. Find cluster intersection
+#############################################
+##### Find intersections of genes between all 6 clusters		
+@transform(getSignatures,
+		   suffix('-signatures.txt'),
+		   '-intersection-5000.txt')
+def getIntersection(infile, outfile):
+	sig_df = pd.read_table(infile).set_index('gene')
+	# Make each signature to a np.array
+	s17a=sig_df['17_a'].values
+	s17b=sig_df['17_b'].values
+	s17c=sig_df['17_c'].values
+	s2a=sig_df['2_a'].values
+	s2b=sig_df['2_b'].values
+	s2c=sig_df['2_c'].values
+	s15a=sig_df['15_a'].values
+	s15b=sig_df['15_b'].values
+	s15c=sig_df['15_c'].values
+	s18a=sig_df['18_a'].values
+	s18b=sig_df['18_b'].values
+	s18c=sig_df['18_c'].values
+	s19a=sig_df['19_a'].values
+	s19b=sig_df['19_b'].values
+	s19c=sig_df['19_c'].values
+	s19d=sig_df['19_d'].values
+	s1=sig_df['1'].values
+	s5a=sig_df['5_a'].values
+	s5b=sig_df['5_b'].values
+	s5c=sig_df['5_c'].values
+	s11=sig_df['11'].values
+	s3=sig_df['3'].values
+	# Take vector sum per cluster as a representation of intersection
+	cluster1_inter= s17a + s17b + s17c + s2a + s2b + s2c
+	cluster2_inter= s15c + s19b + s19d
+	cluster3_inter= s15a + s15b + s3 + s18b + s11
+	cluster4_inter= s18c + s5b +s5c
+	cluster5_inter= s1 + s19c
+	cluster6_inter= s18a + s5a
+	# Sort the array in reserve order
+	sort_idx_1 = np.argsort(cluster1_inter)[::-1]
+	sort_idx_2 = np.argsort(cluster2_inter)[::-1]
+	sort_idx_3 = np.argsort(cluster3_inter)[::-1]
+	sort_idx_4 = np.argsort(cluster4_inter)[::-1]
+	sort_idx_5 = np.argsort(cluster5_inter)[::-1]
+	sort_idx_6 = np.argsort(cluster6_inter)[::-1]
+	# Return an index of top 5000 summed genes for this cluster
+	sorted_genes_1 = sig_df.index[sort_idx_1][:5000]
+	sorted_genes_2 = sig_df.index[sort_idx_2][:5000]
+	sorted_genes_3 = sig_df.index[sort_idx_3][:5000]
+	sorted_genes_4 = sig_df.index[sort_idx_4][:5000]
+	sorted_genes_5 = sig_df.index[sort_idx_5][:5000]
+	sorted_genes_6 = sig_df.index[sort_idx_6][:5000]
+	# Intersection of all 6 clusters's top 500 differentially exp. genes
+	export = sorted_genes_1 & sorted_genes_2 & sorted_genes_3 & sorted_genes_4 & sorted_genes_5 & sorted_genes_6
+	export_to.csv(outfile, sep='\t')
 
 
 
