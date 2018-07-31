@@ -217,7 +217,7 @@ def getSinglesig(infile, outfiles, outfileRoot):
 ##### Find intersections of genes between all 6 clusters		
 @transform(getSignatures,
 		   suffix('-signatures.txt'),
-		   '-intersection-5000.txt')
+		   '-intersection-2000.txt')
 def getIntersection(infile, outfile):
 	sig_df = pd.read_table(infile).set_index('gene')
 	# Make each signature to a np.array
@@ -258,15 +258,15 @@ def getIntersection(infile, outfile):
 	sort_idx_5 = np.argsort(cluster5_inter)[::-1]
 	sort_idx_6 = np.argsort(cluster6_inter)[::-1]
 	# Return an index of top 5000 summed genes for this cluster
-	sorted_genes_1 = sig_df.index[sort_idx_1][:5000]
-	sorted_genes_2 = sig_df.index[sort_idx_2][:5000]
-	sorted_genes_3 = sig_df.index[sort_idx_3][:5000]
-	sorted_genes_4 = sig_df.index[sort_idx_4][:5000]
-	sorted_genes_5 = sig_df.index[sort_idx_5][:5000]
-	sorted_genes_6 = sig_df.index[sort_idx_6][:5000]
+	sorted_genes_1 = sig_df.index[sort_idx_1][:2000]
+	sorted_genes_2 = sig_df.index[sort_idx_2][:2000]
+	sorted_genes_3 = sig_df.index[sort_idx_3][:2000]
+	sorted_genes_4 = sig_df.index[sort_idx_4][:2000]
+	sorted_genes_5 = sig_df.index[sort_idx_5][:2000]
+	sorted_genes_6 = sig_df.index[sort_idx_6][:2000]
 	# Intersection of all 6 clusters's top 500 differentially exp. genes
-	export = sorted_genes_1 & sorted_genes_2 & sorted_genes_3 & sorted_genes_4 & sorted_genes_5 & sorted_genes_6
-	export_to.csv(outfile, sep='\t')
+	export=pd.DataFrame (sorted_genes_1 & sorted_genes_2 & sorted_genes_3 & sorted_genes_4 & sorted_genes_5 & sorted_genes_6)
+	export.to_csv(outfile, sep='\t', index=False)
 
 
 
