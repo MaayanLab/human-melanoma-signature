@@ -95,7 +95,7 @@ def getCPM(infile, outfile):
 ########## S2. Generate signatures
 #######################################################
 #######################################################
-# 
+# Differentially expressed genes are compiled as a signature/vector per study
 
 #############################################
 ########## 1. Label sample IDs with their status groups
@@ -192,6 +192,40 @@ def getGenesets(infile, outfile):
 	f.write(json.dumps(dict_top_genes, ensure_ascii=False, indent=4))
 	# close file
 	f.close()
+#############################################
+########## 4. Intersection of genes
+#############################################
+##### Find intersections of genes between all 6 clusters
+@subdivide(getSignatures,
+		   formatter(),
+		   's2-signatures.dir/melanoma-signature-study-*.txt',
+		   's2-signatures.dir/melanoma-signature-study-')
+def getSinglesig(infile, outfiles, outfileRoot):	
+	sig_df = pd.read_table(infile).set_index('gene')
+	# Loop through studies 
+	for study in sig_df.columns[:]:
+		print('Doing '+ study)
+		# Make each signature (column) to a np.array
+		study_signature = sig_df[study].values
+		outfile = '{outfileRoot}{study}.txt'.format(**locals())
+		np.savetxt(outfile, study_signature)
+# @transform(getSignatures,
+# 		   suffix('-signatures.txt'),
+# 		   '-intersection.txt')
+# def getIntersection(infile, outfile):
+# 	sig_df = pd.read_table(infile).set_index('gene')
+# 	# Make each signature to a np.array
+# 	s1=sig_df['1'].values
+# 	s19c=sig_df['19_c'].values
+# 	# Take vector sum per cluster as a representation of intersection
+# 	cluster5_inter= s1 + s19c
+# 	# Sort the array in reserve order
+# 	sort_idx = np.argsort(cluster5_inter)[::-1]
+# 	# Return an index of top 500 summed genes for this cluster
+# 	sorted_genes = sig_df.index[sort_idx]
+
+
+
 
 #######################################################
 #######################################################
@@ -281,20 +315,25 @@ def getEnrichr (infile, outfile):
 ########## 2. Analyze enrichr results cross-studies
 #############################################
 ##### Find out the significantly overlapping upregulated pathways via FDR values
-@transform(getEnrichr,
-		   suffix('-enrichr-results.txt'),
-		   '-all-top-FDR-log.txt')
+@subdivide(getEnrichr,
+		   formatter(),
+		   's4-enrichment.dir/enrichr-results-*.txt',
+		   's4-enrichment.dir/enrichr-results-')
 
-def getTopfdr (infile, outfile):
+def getTopfdr (infile, outfiles, outfileRoot):
 	enr_res_df = pd.read_table(infile)
 	# Select rows whose column value equals a scalar 'top'
-	all_top = enr_res_df.loc[enr_res_df['direction'] == 'top']
-	# Create a table of pathways to study names, filtered by FDR value
-	# Fill na value is set to 1 since that'd be the lowest for log transformation later
-	toptable= all_top.pivot(index='term_name', columns = 'signature',values='FDR').fillna(1)
-	# Log 10 transformation
-	all_top_log = -np.log10(toptable)
-	all_top_log.to_csv (outfile, sep='\t')
+
+	for direction in ['top', 'bottom']:
+		all_top = enr_res_df.loc[enr_res_df['direction'] == direction]
+		
+		# Create a table of pathways to study names, filtered by FDR value
+		# Fill na value is set to 1 since that'd be the lowest for log transformation later
+		toptable= all_top.pivot(index='term_name', columns = 'signature',values='FDR').fillna(1)
+		# Log 10 transformation
+		all_top_log = -np.log10(toptable)
+		outfile = '{outfileRoot}{direction}.txt'.format(**locals())
+		all_top_log.to_csv (outfile, sep='\t')
 
 	# # Convert 2D array to a boolean array
 	# mask = (all_top_log > 0.000001).sum(axis=1)
@@ -305,8 +344,8 @@ def getTopfdr (infile, outfile):
 #############################################
 ##### Use seaborn to visualize consensus pathways 
 @transform(getTopfdr,
-		   suffix('-all-top-FDR-log.txt'),
-		   '-top-FDR-log-heatmap.png')
+		   suffix('.txt'),
+		   '-FDR-heatmap.png')
 def getTopfdrheat (infile, outfile):
 	all_top_log = pd.read_table(infile, index_col='term_name')
 	# Unbiased variance over columns, take top 20 results
@@ -318,7 +357,7 @@ def getTopfdrheat (infile, outfile):
 	# Export graph
 	g2.savefig(outfile)
 #############################################
-########## 4. Use Clustergrammer to create heatmap of up & down genes
+########## 5. Use Clustergrammer to create heatmap of up & down genes
 #############################################
 # from IPython.display import HTML, display
 # # to display hyperlink as <a> tag in output cells
