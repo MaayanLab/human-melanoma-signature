@@ -217,8 +217,8 @@ def getSinglesig(infile, outfiles, outfileRoot):
 ##### Find intersections of genes between all 6 clusters		
 @transform(getSignatures,
 		   suffix('-signatures.txt'),
-		   '-intersection-2000.txt')
-def getIntersection(infile, outfile):
+		   '-top50sig-clusterunion.txt')
+def getUnion(infile, outfile):
 	sig_df = pd.read_table(infile).set_index('gene')
 	# Make each signature to a np.array
 	s17a=sig_df['17_a'].values
@@ -264,8 +264,8 @@ def getIntersection(infile, outfile):
 	sorted_genes_4 = sig_df.index[sort_idx_4][:2000]
 	sorted_genes_5 = sig_df.index[sort_idx_5][:2000]
 	sorted_genes_6 = sig_df.index[sort_idx_6][:2000]
-	# Intersection of all 6 clusters's top 500 differentially exp. genes
-	export=pd.DataFrame (sorted_genes_1 & sorted_genes_2 & sorted_genes_3 & sorted_genes_4 & sorted_genes_5 & sorted_genes_6)
+	# Union of all 6 clusters's top 50 differentially exp. genes
+	export=pd.DataFrame (sorted_genes_1 | sorted_genes_2 | sorted_genes_3 | sorted_genes_4 | sorted_genes_5 | sorted_genes_6)
 	export.to_csv(outfile, sep='\t', index=False)
 
 
@@ -400,7 +400,11 @@ def getTopfdrheat (infile, outfile):
 	# Export graph
 	g2.savefig(outfile)
 #############################################
-########## 5. Use Clustergrammer to create heatmap of up & down genes
+########## 4. Intersection of pathways 
+#############################################
+##### Closely examine the intersection of pathway between all 6 clusters
+#############################################
+########## ?. Use Clustergrammer to create heatmap of up & down genes
 #############################################
 # from IPython.display import HTML, display
 # # to display hyperlink as <a> tag in output cells
