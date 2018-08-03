@@ -217,7 +217,7 @@ def getSinglesig(infile, outfiles, outfileRoot):
 ##### Find intersections of genes between all 6 clusters		
 @transform(getSignatures,
 		   suffix('-signatures.txt'),
-		   '-top50sig-clusterunion.txt')
+		   '-top50sig-union.txt')
 def getUnion(infile, outfile):
 	sig_df = pd.read_table(infile).set_index('gene')
 	# Make each signature to a np.array
@@ -246,29 +246,29 @@ def getUnion(infile, outfile):
 	# Take vector sum per cluster as a representation of intersection
 	cluster1_inter= s17a + s17b + s17c + s2a + s2b + s2c
 	cluster2_inter= s15c + s19b + s19d
-	cluster3_inter= s15a + s15b + s3 + s18b + s11
+	cluster3_inter= s15a + s15b + s3 + s18b + s11 + s19a
 	cluster4_inter= s18c + s5b +s5c
 	cluster5_inter= s1 + s19c
 	cluster6_inter= s18a + s5a
-	# Sort the array in reserve order
-	sort_idx_1 = np.argsort(cluster1_inter)[::-1]
-	sort_idx_2 = np.argsort(cluster2_inter)[::-1]
-	sort_idx_3 = np.argsort(cluster3_inter)[::-1]
-	sort_idx_4 = np.argsort(cluster4_inter)[::-1]
-	sort_idx_5 = np.argsort(cluster5_inter)[::-1]
-	sort_idx_6 = np.argsort(cluster6_inter)[::-1]
-	# Return an index of top 5000 summed genes for this cluster
-	sorted_genes_1 = sig_df.index[sort_idx_1][:2000]
-	sorted_genes_2 = sig_df.index[sort_idx_2][:2000]
-	sorted_genes_3 = sig_df.index[sort_idx_3][:2000]
-	sorted_genes_4 = sig_df.index[sort_idx_4][:2000]
-	sorted_genes_5 = sig_df.index[sort_idx_5][:2000]
-	sorted_genes_6 = sig_df.index[sort_idx_6][:2000]
+	# Take absolute values to include both up & down, sort the array in reserve order
+	sort_idx_1 = np.argsort(np.abs(cluster1_inter))[::-1]
+	sort_idx_2 = np.argsort(np.abs(cluster2_inter))[::-1]
+	sort_idx_3 = np.argsort(np.abs(cluster3_inter))[::-1]
+	sort_idx_4 = np.argsort(np.abs(cluster4_inter))[::-1]
+	sort_idx_5 = np.argsort(np.abs(cluster5_inter))[::-1]
+	sort_idx_6 = np.argsort(np.abs(cluster6_inter))[::-1]
+	# Return an index of top 50 summed genes for this cluster
+	sorted_genes_1 = sig_df.index[sort_idx_1][:50]
+	sorted_genes_2 = sig_df.index[sort_idx_2][:50]
+	sorted_genes_3 = sig_df.index[sort_idx_3][:50]
+	sorted_genes_4 = sig_df.index[sort_idx_4][:50]
+	sorted_genes_5 = sig_df.index[sort_idx_5][:50]
+	sorted_genes_6 = sig_df.index[sort_idx_6][:50]
 	# Union of all 6 clusters's top 50 differentially exp. genes
-	export=pd.DataFrame (sorted_genes_1 | sorted_genes_2 | sorted_genes_3 | sorted_genes_4 | sorted_genes_5 | sorted_genes_6)
-	export.to_csv(outfile, sep='\t', index=False)
-
-
+	export= set(sorted_genes_1) | set(sorted_genes_2) | set(sorted_genes_3) | set(sorted_genes_4) | set(sorted_genes_5) | set(sorted_genes_6)	export.to_csv(outfile, sep='\t', index=False)
+	# Subset the original signature matrix with the union genes we extracted
+	export_df=sig_df.loc[export]
+	export_df.to_csv(outfile, sep='\t')
 
 #######################################################
 #######################################################
