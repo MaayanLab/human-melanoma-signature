@@ -212,7 +212,7 @@ def getSinglesig(infile, outfiles, outfileRoot):
 		np.savetxt(outfile, study_signature)
 
 #############################################
-########## 5. Find cluster intersection
+########## 5. Find cluster intersection/union
 #############################################
 ##### Find intersections of genes between all 6 clusters		
 @transform(getSignatures,
@@ -265,12 +265,36 @@ def getUnion(infile, outfile):
 	sorted_genes_5 = sig_df.index[sort_idx_5][:50]
 	sorted_genes_6 = sig_df.index[sort_idx_6][:50]
 	# Union of all 6 clusters's top 50 differentially exp. genes
-	export= set(sorted_genes_1) | set(sorted_genes_2) | set(sorted_genes_3) | set(sorted_genes_4) | set(sorted_genes_5) | set(sorted_genes_6)	export.to_csv(outfile, sep='\t', index=False)
+	export = set(sorted_genes_1) | set(sorted_genes_2) | set(sorted_genes_3) | set(sorted_genes_4) | set(sorted_genes_5) | set(sorted_genes_6)	export.to_csv(outfile, sep='\t', index=False)
 	# Subset the original signature matrix with the union genes we extracted
 	export_df=sig_df.loc[export]
 	export_df.to_csv(outfile, sep='\t')
+	# Intersection
+	# center= set(sorted_genes_1) & set(sorted_genes_2) & set(sorted_genes_3) & set(sorted_genes_4) & set(sorted_genes_5) & set(sorted_genes_6)
+	# top500inter=sig_df.loc[center]
+	# top500inter.to_csv(outfile, sep='\t')
 
-#######################################################
+#############################################
+########## 6. Find other general overlap
+#############################################
+##### Find top overlap of genes between studies, besides union and intersection
+##### Use rank score to find top & bottom 250 genes across studies
+@transform(getSignatures,
+		   suffix('.txt'),
+		   '-80percent.txt')
+def getPercent(infile,outfile):
+	sig_df=pd.read_table(infile, index_col='gene')
+	sig_df_ranked=sig_df.rank()# Rank matrix
+	like=np.zeros_like(sig_df_ranked) # Create an all zero array
+	# define top 250 and bottom ranked 250 genes as 1
+	like[sig_df_ranked<250]=1
+	like[sig_df_ranked>(18992-250)]= 1
+	ls=like.sum(axis=1) # Row sums of all 18992 row entries
+	# subset 17/22=0.8, genes that are present top 250, 80% at the time
+	subset80=sig_df[ls>17]
+	subset80.to_csv(outfile, sep='\t')
+	
+######################################################
 #######################################################
 ########## S3. Explore relationships between different studies
 #######################################################
